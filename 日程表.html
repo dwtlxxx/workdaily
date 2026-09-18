@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日程表</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --surface-hover: #f8f9fc;
+            --border: #e2e6ee;
+            --border-light: #eef0f5;
+            --text: #2c3e50;
+            --text-secondary: #7f8c9d;
+            --text-muted: #aab4c5;
+            --accent: #5b7cfa;
+            --accent-hover: #4a6ae8;
+            --accent-light: #eef2ff;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.22);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --radius-xl: 22px;
+            --transition: 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            --hour-height: 56px;
+            --time-col-width: 60px;
+            --header-height: 58px;
+            --toolbar-height: 52px;
+            --day-col-width: 1fr;
+            --event-colors: #5b7cfa, #22c55e, #f59e0b, #ef4444, #a855f7, #06b6d4, #f97316, #ec4899, #84cc16, #6366f1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ========== 顶部标题栏 ========== */
+        .app-header {
+            height: var(--header-height);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            z-index: 100;
+        }
+        .app-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #5b7cfa, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .app-title .icon {
+            font-size: 26px;
+            -webkit-text-fill-color: initial;
+            background: none;
+        }
+        .header-divider {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .header-info .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.4);
+            }
+        }
+
+        /* ========== 工具栏 ========== */
+        .toolbar {
+            height: var(--toolbar-height);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 8px;
+            position: relative;
+            z-index: 90;
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .toolbar-group+.toolbar-group {
+            margin-left: 12px;
+            padding-left: 12px;
+            border-left: 1px solid var(--border-light);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            font-family: var(--font);
+            line-height: 1.4;
+            letter-spacing: 0.2px;
+        }
+        .btn:hover {
+            background: var(--surface-hover);
+            border-color: #d0d5e0;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn:active {
+            transform: scale(0.97);
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(91, 124, 250, 0.35);
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(91, 124, 250, 0.45);
+        }
+        .btn-icon {
+            padding: 7px 9px;
+            font-size: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text);
+            line-height: 1;
+        }
+        .btn-icon:hover {
+            background: var(--surface-hover);
+            border-color: #d0d5e0;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-icon:active {
+            transform: scale(0.93);
+        }
+        .btn-danger {
+            background: var(--danger-light);
+            border-color: #fca5a5;
+            color: var(--danger);
+        }
+        .btn-danger:hover {
+            background: #fecaca;
+            border-color: #f87171;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+        }
+        .date-display {
+            font-size: 16px;
+            font-weight: 600;
+            min-width: 180px;
+            text-align: center;
+            letter-spacing: 0.5px;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .date-input {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: var(--font);
+            color: var(--text);
+            background: var(--surface);
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+            width: 130px;
+        }
+        .date-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 124, 250, 0.15);
+        }
+        .kbd-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--surface-hover);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 2px 6px;
+            margin-left: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        /* ========== 主体布局 ========== */
+        .main-container {
+            display: flex;
+            height: calc(100vh - var(--header-height) - var(--toolbar-height));
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ========== 时间轴侧边 ========== */
+        .time-axis {
+            width: var(--time-col-width);
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+        }
+        .time-axis-inner {
+            position: relative;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+        }
+        .time-axis-inner::-webkit-scrollbar {
+            display: none;
+        }
+        .time-axis .spacer {
+            height: 28px;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--surface);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .time-labels {
+            position: relative;
+        }
+        .time-label {
+            height: var(--hour-height);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            position: relative;
+        }
+        .time-label span {
+            transform: translateY(-6px);
+            background: var(--surface);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        /* ========== 周视图网格 ========== */
+        .week-grid-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: var(--surface);
+            scrollbar-width: thin;
+            scrollbar-color: #cbd0da transparent;
+        }
+        .week-grid-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .week-grid-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .week-grid-container::-webkit-scrollbar-thumb {
+            background: #cbd0da;
+            border-radius: 4px;
+        }
+        .week-grid-container::-webkit-scrollbar-thumb:hover {
+            background: #aab4c5;
+        }
+        .week-grid-inner {
+            min-width: 720px;
+            position: relative;
+            height: 100%;
+        }
+        /* 星期头部 */
+        .day-headers {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            height: 28px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .day-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-right: 1px solid var(--border-light);
+            letter-spacing: 0.3px;
+            position: relative;
+            transition: var(--transition);
+        }
+        .day-header:last-child {
+            border-right: none;
+        }
+        .day-header .day-num {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            transition: var(--transition);
+        }
+        .day-header.today {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+        .day-header.today .day-num {
+            color: var(--accent);
+        }
+        .day-header.today::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 3px 3px 0 0;
+        }
+        .day-header.weekend {
+            background: #fafbfe;
+            color: var(--text-muted);
+        }
+        .day-header.weekend .day-num {
+            color: var(--text-muted);
+        }
+        /* 网格主体 */
+        .grid-body {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            position: relative;
+            min-height: calc(24 * var(--hour-height));
+            background: var(--surface);
+        }
+        .day-column {
+            border-right: 1px solid var(--border-light);
+            position: relative;
+            background: var(--surface);
+            transition: var(--transition);
+        }
+        .day-column:last-child {
+            border-right: none;
+        }
+        .day-column.weekend {
+            background: #fafbfe;
+        }
+        .day-column.today {
+            background: #fbfcff;
+        }
+        .day-column:hover {
+            background: #fafbfe;
+        }
+        .day-column.weekend:hover {
+            background: #f5f7fc;
+        }
+        .hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border-light);
+            pointer-events: none;
+        }
+        .half-hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #f3f4f8;
+            pointer-events: none;
+        }
+        /* 当前时间线 */
+        .now-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--danger);
+            z-index: 15;
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+            opacity: 0.85;
+            transition: top 0.5s ease;
+        }
+        .now-line::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: -4px;
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+        }
+
+        /* ========== 事件块 ========== */
+        .event-block {
+            position: absolute;
+            border-radius: var(--radius-sm);
+            padding: 4px 8px 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: grab;
+            overflow: hidden;
+            transition: box-shadow 0.15s, transform 0.1s;
+            z-index: 5;
+            border-left: 3px solid;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+            min-height: 18px;
+            letter-spacing: 0.2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.3;
+        }
+        .event-block:hover {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+            z-index: 25;
+            transform: translateY(-1px);
+        }
+        .event-block.selected {
+            box-shadow: 0 0 0 2.5px var(--accent), 0 6px 20px rgba(0, 0, 0, 0.15);
+            z-index: 30;
+        }
+        .event-block.dragging {
+            cursor: grabbing;
+            opacity: 0.85;
+            z-index: 40;
+            box-shadow: var(--shadow-lg);
+            transform: scale(1.02);
+            transition: none;
+        }
+        .event-block .ev-title {
+            font-weight: 600;
+            font-size: 12px;
+            white-space: normal;
+            word-break: break-word;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
+        .event-block .ev-time {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.85);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 400;
+        }
+        .event-block .ev-link-icon {
+            position: absolute;
+            top: 3px;
+            right: 5px;
+            font-size: 11px;
+            opacity: 0.75;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .event-block .ev-link-icon:hover {
+            opacity: 1;
+            transform: scale(1.25);
+        }
+        /* 完成按钮 */
+        .event-block .ev-complete-btn {
+            position: absolute;
+            top: 3px;
+            right: 25px;
+            font-size: 12px;
+            opacity: 0.7;
+            cursor: pointer;
+            transition: var(--transition);
+            color: rgba(255, 255, 255, 0.9);
+            background: transparent;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            z-index: 5;
+        }
+        .event-block .ev-complete-btn:hover {
+            opacity: 1;
+            transform: scale(1.3);
+        }
+        /* 已完成样式 */
+        .event-block.completed {
+            filter: grayscale(0.8) brightness(0.7);
+            opacity: 0.75;
+        }
+        .event-block.completed .ev-title {
+            text-decoration: line-through;
+        }
+        /* 拖动手柄 */
+        .event-block .resize-handle-top,
+        .event-block .resize-handle-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 7px;
+            cursor: ns-resize;
+            z-index: 3;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .event-block:hover .resize-handle-top,
+        .event-block:hover .resize-handle-bottom {
+            opacity: 1;
+        }
+        .event-block .resize-handle-top {
+            top: 0;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        }
+        .event-block .resize-handle-bottom {
+            bottom: 0;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+        }
+        .event-block .resize-handle-top::after,
+        .event-block .resize-handle-bottom::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 3px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ========== 侧边导航按钮 ========== */
+        .side-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            color: var(--text);
+            user-select: none;
+            opacity: 0.75;
+        }
+        .side-nav-btn:hover {
+            opacity: 1;
+            box-shadow: var(--shadow-lg);
+            background: var(--surface-hover);
+            transform: translateY(-50%) scale(1.05);
+        }
+        .side-nav-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+        .side-nav-btn.left {
+            left: calc(var(--time-col-width) + 10px);
+        }
+        .side-nav-btn.right {
+            right: 10px;
+        }
+
+        /* ========== 弹窗系统 ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.28);
+            z-index: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal {
+            position: fixed;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            z-index: 600;
+            width: 440px;
+            max-width: calc(100vw - 40px);
+            max-height: calc(100vh - 60px);
+            overflow: visible;
+            opacity: 0;
+            transform: translateY(18px) scale(0.96);
+            transition: opacity 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+            pointer-events: none;
+            border: 1px solid var(--border);
+        }
+        .modal.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        .modal.closing {
+            opacity: 0;
+            transform: translateY(12px) scale(0.95);
+            pointer-events: none;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px 12px;
+            border-bottom: 1px solid var(--border-light);
+            cursor: grab;
+            user-select: none;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            background: linear-gradient(135deg, #fafbff, #f5f7fc);
+        }
+        .modal-header:active {
+            cursor: grabbing;
+        }
+        .modal-header .modal-title-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-header .modal-title-text .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        .modal-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .modal-close:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+        .modal-body {
+            padding: 16px 18px 18px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd0da transparent;
+        }
+        .modal-body::-webkit-scrollbar {
+            width: 5px;
+        }
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd0da;
+            border-radius: 4px;
+        }
+        /* 表单样式 */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        .form-row .form-group {
+            flex: 1;
+            min-width: 0;
+        }
+        .form-row .form-group.full {
+            flex: 2;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-group label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: var(--font);
+            color: var(--text);
+            background: var(--surface);
+            transition: var(--transition);
+            outline: none;
+            width: 100%;
+            letter-spacing: 0.2px;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 124, 250, 0.15);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 50px;
+            max-height: 120px;
+            font-size: 12px;
+        }
+        .form-group input[type="color"] {
+            padding: 3px;
+            height: 36px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            width: 50px;
+            flex-shrink: 0;
+        }
+        .form-group input[type="time"] {
+            cursor: pointer;
+        }
+        .form-group input[type="date"] {
+            cursor: pointer;
+        }
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-swatches {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .color-swatch {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: var(--transition);
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .color-swatch:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .color-swatch.active {
+            border-color: #fff;
+            box-shadow: 0 0 0 2.5px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.25);
+            transform: scale(1.15);
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 18px 16px;
+            border-top: 1px solid var(--border-light);
+            background: #fafbfe;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+        .modal-footer .btn {
+            min-width: 70px;
+            justify-content: center;
+        }
+        /* 完成状态复选框样式 */
+        .completed-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .completed-checkbox-row label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .completed-checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            font-size: 14px;
+            gap: 8px;
+        }
+        .empty-state .big-icon {
+            font-size: 42px;
+            opacity: 0.5;
+        }
+
+        /* ========== Toast通知 ========== */
+        .toast-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-md);
+            border-left: 3px solid var(--accent);
+            animation: toast-in 0.3s ease, toast-out 0.3s ease 2.5s forwards;
+            letter-spacing: 0.2px;
+            max-width: 300px;
+        }
+        .toast.success {
+            border-left-color: #22c55e;
+        }
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        @keyframes toast-out {
+            to {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+        }
+
+        /* ========== 响应式微调 ========== */
+        @media (max-width: 900px) {
+            .header-info {
+                display: none;
+            }
+            .toolbar-group .btn span.btn-text {
+                display: none;
+            }
+            .toolbar-group .btn {
+                padding: 7px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 顶部标题栏 ===== -->
+    <header class="app-header">
+        <div class="app-title">
+            <span class="icon">📅</span> 日程表
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-info">
+            <span class="dot"></span>
+            <span>本地保存 · 多标签页实时同步</span>
+        </div>
+    </header>
+
+    <!-- ===== 工具栏 ===== -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <button class="btn-icon" id="btnPrevDay" title="前一天">◀</button>
+            <button class="btn" id="btnToday" title="回到今天">📌 <span class="btn-text">今天</span></button>
+            <button class="btn-icon" id="btnNextDay" title="后一天">▶</button>
+        </div>
+        <div class="toolbar-group">
+            <input type="date" class="date-input" id="datePicker" title="跳转到指定日期（视图居中）">
+            <span class="date-display" id="dateDisplay"></span>
+        </div>
+        <div class="toolbar-group">
+            <button class="btn btn-primary" id="btnNewEvent">＋ 新建日程</button>
+        </div>
+        <div class="toolbar-group" style="margin-left:auto;">
+            <button class="btn-icon" id="btnRefresh" title="刷新数据">🔄</button>
+            <button class="btn-icon" id="btnClearAll" title="清除所有日程" style="color:var(--danger);">🗑️</button>
+        </div>
+    </div>
+
+    <!-- ===== 主体 ===== -->
+    <div class="main-container">
+        <!-- 时间轴 -->
+        <div class="time-axis">
+            <div class="time-axis-inner" id="timeAxisInner">
+                <div class="spacer"></div>
+                <div class="time-labels" id="timeLabels"></div>
+            </div>
+        </div>
+        <!-- 周视图网格（无限滚动） -->
+        <div class="week-grid-container" id="weekGridContainer">
+            <!-- 侧边导航按钮（无限滚动） -->
+            <div class="side-nav-btn left" id="sideLeftBtn" title="向前滚动">‹</div>
+            <div class="side-nav-btn right" id="sideRightBtn" title="向后滚动">›</div>
+            <div class="week-grid-inner" id="weekGridInner">
+                <div class="day-headers" id="dayHeaders"></div>
+                <div class="grid-body" id="gridBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 弹窗容器 ===== -->
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <!-- 弹窗会动态创建 -->
+
+    <!-- ===== Toast容器 ===== -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ==================== 常量与状态 ====================
+            const STORAGE_KEY = 'schedule_data_v2';
+            const BROADCAST_CHANNEL_NAME = 'schedule_sync_channel';
+            const HOUR_HEIGHT = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hour-height')) || 56;
+            const MIN_EVENT_DURATION = 0.25; // 15分钟
+            const DAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const PRESET_COLORS = [
+                '#5b7cfa', '#22c55e', '#f59e0b', '#ef4444', '#a855f7',
+                '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#6366f1',
+                '#0d9488', '#d946ef', '#eab308', '#3b82f6', '#8b5cf6'
+            ];
+
+            let state = {
+                events: [],
+                viewStartDate: null,
+                selectedEventId: null,
+                colorCycleIndex: 0,
+                modals: [],
+                modalZIndex: 600,
+                modalCounter: 0,
+            };
+
+            // DOM引用
+            const $ = (sel) => document.querySelector(sel);
+            const $$ = (sel) => document.querySelectorAll(sel);
+            const dateDisplay = $('#dateDisplay');
+            const datePicker = $('#datePicker');
+            const dayHeaders = $('#dayHeaders');
+            const gridBody = $('#gridBody');
+            const timeLabels = $('#timeLabels');
+            const weekGridContainer = $('#weekGridContainer');
+            const timeAxisInner = $('#timeAxisInner');
+            const modalOverlay = $('#modalOverlay');
+            const toastContainer = $('#toastContainer');
+
+            // BroadcastChannel（用于多标签页同步）
+            let broadcastChannel = null;
+            try {
+                broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+                broadcastChannel.onmessage = (e) => {
+                    if (e.data && e.data.type === 'sync') {
+                        loadFromStorage(true);
+                    }
+                };
+            } catch (e) {
+                // BroadcastChannel不可用，使用storage事件
+            }
+
+            // ==================== 工具函数 ====================
+            function formatDate(date) {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            function parseDate(dateStr) {
+                const [y, m, d] = dateStr.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+
+            function formatHour(hour) {
+                const h = Math.floor(hour);
+                const mins = Math.round((hour - h) * 60);
+                const hStr = String(h).padStart(2, '0');
+                const mStr = String(mins).padStart(2, '0');
+                return `${hStr}:${mStr}`;
+            }
+
+            function formatHourShort(hour) {
+                const h = Math.floor(hour);
+                const mins = Math.round((hour - h) * 60);
+                if (mins === 0) return `${h}:00`;
+                return `${h}:${String(mins).padStart(2, '0')}`;
+            }
+
+            function hourToTimeInputValue(hour) {
+                return formatHour(hour);
+            }
+
+            function timeInputToHour(timeStr) {
+                const [h, m] = timeStr.split(':').map(Number);
+                return h + m / 60;
+            }
+
+            function generateId() {
+                return 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            }
+
+            function addDays(date, days) {
+                const d = new Date(date);
+                d.setDate(d.getDate() + days);
+                return d;
+            }
+
+            function isSameDay(a, b) {
+                return a.getFullYear() === b.getFullYear() &&
+                    a.getMonth() === b.getMonth() &&
+                    a.getDate() === b.getDate();
+            }
+
+            function isToday(date) {
+                return isSameDay(date, new Date());
+            }
+
+            function isWeekend(date) {
+                const day = date.getDay();
+                return day === 0 || day === 6;
+            }
+
+            function clamp(v, min, max) {
+                return Math.max(min, Math.min(max, v));
+            }
+
+            function roundToQuarter(hour) {
+                return Math.round(hour * 4) / 4;
+            }
+
+            function getViewStartForCenterDate(centerDate) {
+                return addDays(centerDate, -3);
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 3000);
+            }
+
+            // ==================== 数据管理 ====================
+            function loadFromStorage(skipToast) {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        if (data && Array.isArray(data.events)) {
+                            state.events = data.events;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('加载数据失败:', e);
+                }
+                renderAll();
+                if (!skipToast) {
+                    showToast('已从其他标签页同步数据', 'success');
+                }
+            }
+
+            function saveToStorage() {
+                try {
+                    const data = { events: state.events };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                    if (broadcastChannel) {
+                        broadcastChannel.postMessage({ type: 'sync' });
+                    }
+                } catch (e) {
+                    console.warn('保存数据失败:', e);
+                }
+            }
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === STORAGE_KEY) {
+                    loadFromStorage(true);
+                }
+            });
+
+            // ==================== 事件操作 ====================
+            function getEventById(id) {
+                return state.events.find(ev => ev.id === id);
+            }
+
+            function addEvent(eventData) {
+                const ev = {
+                    id: generateId(),
+                    title: eventData.title || '新日程',
+                    date: eventData.date || formatDate(new Date()),
+                    startHour: roundToQuarter(eventData.startHour ?? 9),
+                    endHour: roundToQuarter(eventData.endHour ?? 10),
+                    color: eventData.color || PRESET_COLORS[0],
+                    link: eventData.link || '',
+                    description: eventData.description || '',
+                    completed: eventData.completed || false,
+                    createdAt: Date.now(),
+                };
+                if (ev.endHour <= ev.startHour) {
+                    ev.endHour = ev.startHour + 1;
+                }
+                state.events.push(ev);
+                saveToStorage();
+                renderAll();
+                return ev;
+            }
+
+            function updateEvent(id, updates) {
+                const ev = getEventById(id);
+                if (!ev) return;
+                Object.assign(ev, updates);
+                if (ev.endHour <= ev.startHour) {
+                    ev.endHour = ev.startHour + MIN_EVENT_DURATION;
+                }
+                saveToStorage();
+                renderAll();
+            }
+
+            function deleteEvent(id) {
+                state.events = state.events.filter(ev => ev.id !== id);
+                if (state.selectedEventId === id) {
+                    state.selectedEventId = null;
+                }
+                saveToStorage();
+                renderAll();
+            }
+
+            function getAllEventsForDate(dateStr) {
+                return state.events.filter(ev => ev.date === dateStr);
+            }
+
+            // ==================== 渲染 - 时间轴 ====================
+            function renderTimeAxis() {
+                let html = '';
+                for (let h = 0; h < 24; h++) {
+                    html += `<div class="time-label" style="height:${HOUR_HEIGHT}px;"><span>${String(h).padStart(2,'0')}:00</span></div>`;
+                }
+                timeLabels.innerHTML = html;
+            }
+
+            // ==================== 渲染 - 周视图 ====================
+            function renderDayHeaders() {
+                const viewStart = state.viewStartDate;
+                let html = '';
+                const today = new Date();
+                for (let i = 0; i < 7; i++) {
+                    const d = addDays(viewStart, i);
+                    const dateStr = formatDate(d);
+                    const isTodayFlag = isToday(d);
+                    const isWeekendFlag = isWeekend(d);
+                    const dayName = DAY_NAMES[d.getDay()];
+                    const classes = [
+                        'day-header',
+                        isTodayFlag ? 'today' : '',
+                        isWeekendFlag ? 'weekend' : ''
+                    ].filter(Boolean).join(' ');
+                    html += `
+                        <div class="${classes}" data-date="${dateStr}">
+                            <span>${dayName}</span>
+                            <span class="day-num">${d.getDate()}</span>
+                        </div>`;
+                }
+                dayHeaders.innerHTML = html;
+            }
+
+            function renderGrid() {
+                const viewStart = state.viewStartDate;
+                const today = new Date();
+                let html = '';
+                for (let i = 0; i < 7; i++) {
+                    const d = addDays(viewStart, i);
+                    const dateStr = formatDate(d);
+                    const isTodayFlag = isToday(d);
+                    const isWeekendFlag = isWeekend(d);
+                    const classes = [
+                        'day-column',
+                        isTodayFlag ? 'today' : '',
+                        isWeekendFlag ? 'weekend' : ''
+                    ].filter(Boolean).join(' ');
+                    html += `<div class="day-column ${classes}" data-date="${dateStr}" data-day-index="${i}">`;
+                    for (let h = 0; h <= 24; h++) {
+                        html += `<div class="hour-line" style="top:${h * HOUR_HEIGHT}px;"></div>`;
+                        if (h < 24) {
+                            html += `<div class="half-hour-line" style="top:${(h + 0.5) * HOUR_HEIGHT}px;"></div>`;
+                        }
+                    }
+                    html += `</div>`;
+                }
+                gridBody.innerHTML = html;
+
+                renderEventBlocks();
+            }
+
+            function renderEventBlocks() {
+                const viewStart = state.viewStartDate;
+                const oldBlocks = gridBody.querySelectorAll('.event-block');
+                oldBlocks.forEach(b => b.remove());
+
+                for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                    const d = addDays(viewStart, dayIdx);
+                    const dateStr = formatDate(d);
+                    const dayEvents = getAllEventsForDate(dateStr).sort((a, b) => a.startHour - b.startHour);
+                    if (dayEvents.length === 0) continue;
+
+                    const clusters = computeEventClusters(dayEvents);
+                    const dayColumn = gridBody.querySelector(`.day-column[data-day-index="${dayIdx}"]`);
+                    if (!dayColumn) continue;
+
+                    for (const cluster of clusters) {
+                        const totalCols = cluster.maxCols;
+                        for (const item of cluster.items) {
+                            const ev = item.event;
+                            const colIdx = item.col;
+                            const top = ev.startHour * HOUR_HEIGHT;
+                            const height = Math.max((ev.endHour - ev.startHour) * HOUR_HEIGHT, 18);
+                            const blockWidth = `calc((100% - 4px) / ${totalCols})`;
+                            const left = `calc(${colIdx} * (100% - 4px) / ${totalCols} + 2px)`;
+                            const block = document.createElement('div');
+                            block.className = 'event-block';
+                            if (state.selectedEventId === ev.id) block.classList.add('selected');
+                            if (ev.completed) block.classList.add('completed');
+                            block.dataset.eventId = ev.id;
+                            block.dataset.date = ev.date;
+                            block.style.top = `${top}px`;
+                            block.style.height = `${height}px`;
+                            block.style.left = left;
+                            block.style.width = blockWidth;
+                            block.style.background = ev.color;
+                            block.style.borderLeftColor = darkenColor(ev.color, 30);
+                            block.style.zIndex = 5 + (state.selectedEventId === ev.id ? 50 : 0);
+
+                            const titleEl = document.createElement('div');
+                            titleEl.className = 'ev-title';
+                            titleEl.textContent = ev.title || '无标题';
+                            block.appendChild(titleEl);
+                            if (height > 28) {
+                                const timeEl = document.createElement('div');
+                                timeEl.className = 'ev-time';
+                                timeEl.textContent = `${formatHourShort(ev.startHour)} - ${formatHourShort(ev.endHour)}`;
+                                block.appendChild(timeEl);
+                            }
+                            if (ev.link) {
+                                const linkIcon = document.createElement('a');
+                                linkIcon.className = 'ev-link-icon';
+                                linkIcon.href = ev.link;
+                                linkIcon.target = '_blank';
+                                linkIcon.rel = 'noopener';
+                                linkIcon.title = `打开链接: ${ev.link}`;
+                                linkIcon.textContent = '🔗';
+                                linkIcon.addEventListener('click', (e) => e.stopPropagation());
+                                block.appendChild(linkIcon);
+                            }
+                            // 完成状态切换按钮
+                            const completeBtn = document.createElement('button');
+                            completeBtn.className = 'ev-complete-btn';
+                            completeBtn.textContent = ev.completed ? '✅' : '⬜';
+                            completeBtn.title = ev.completed ? '点击标记为未完成' : '点击标记为已完成';
+                            completeBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                updateEvent(ev.id, { completed: !ev.completed });
+                                showToast(ev.completed ? '已完成' : '已取消完成', 'success');
+                            });
+                            block.appendChild(completeBtn);
+
+                            const topHandle = document.createElement('div');
+                            topHandle.className = 'resize-handle-top';
+                            topHandle.dataset.handle = 'top';
+                            topHandle.title = '拖动调整开始时间';
+                            block.appendChild(topHandle);
+                            const bottomHandle = document.createElement('div');
+                            bottomHandle.className = 'resize-handle-bottom';
+                            bottomHandle.dataset.handle = 'bottom';
+                            bottomHandle.title = '拖动调整结束时间';
+                            block.appendChild(bottomHandle);
+
+                            block.addEventListener('mousedown', (e) => onEventMouseDown(e, ev, block));
+                            block.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                if (!block.classList.contains('dragging')) {
+                                    selectEvent(ev.id);
+                                }
+                            });
+                            block.addEventListener('dblclick', (e) => {
+                                e.stopPropagation();
+                                openEditModal(ev.id);
+                            });
+
+                            dayColumn.appendChild(block);
+                        }
+                    }
+                }
+
+                renderNowLine();
+            }
+
+            function computeEventClusters(events) {
+                const sorted = [...events].sort((a, b) => a.startHour - b.startHour);
+                const clusters = [];
+                let currentCluster = [];
+
+                for (const ev of sorted) {
+                    if (currentCluster.length === 0) {
+                        currentCluster.push(ev);
+                    } else {
+                        const lastEnd = Math.max(...currentCluster.map(e => e.endHour));
+                        if (ev.startHour < lastEnd) {
+                            currentCluster.push(ev);
+                        } else {
+                            clusters.push([...currentCluster]);
+                            currentCluster = [ev];
+                        }
+                    }
+                }
+                if (currentCluster.length > 0) clusters.push(currentCluster);
+
+                const result = [];
+                for (const cluster of clusters) {
+                    const sortedCluster = [...cluster].sort((a, b) => a.startHour - b.startHour);
+                    const items = [];
+                    for (const ev of sortedCluster) {
+                        let col = 0;
+                        let found = false;
+                        while (!found) {
+                            const overlapWithCol = items.filter(item =>
+                                item.col === col &&
+                                ev.startHour < item.event.endHour &&
+                                ev.endHour > item.event.startHour
+                            );
+                            if (overlapWithCol.length === 0) {
+                                found = true;
+                            } else {
+                                col++;
+                            }
+                        }
+                        items.push({ event: ev, col });
+                    }
+                    const maxCols = Math.max(...items.map(item => item.col + 1), 1);
+                    result.push({ items, maxCols });
+                }
+                return result;
+            }
+
+            function darkenColor(hex, percent) {
+                const num = parseInt(hex.replace('#', ''), 16);
+                const amt = Math.round(2.55 * percent);
+                const r = Math.max(0, (num >> 16) - amt);
+                const g = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+                const b = Math.max(0, (num & 0x0000FF) - amt);
+                return `rgb(${r},${g},${b})`;
+            }
+
+            function renderNowLine() {
+                const oldLine = gridBody.querySelector('.now-line');
+                if (oldLine) oldLine.remove();
+                const now = new Date();
+                const viewStart = state.viewStartDate;
+                const viewEnd = addDays(viewStart, 7);
+                if (now >= viewStart && now < viewEnd) {
+                    const dayIdx = Math.floor((now - viewStart) / (1000 * 60 * 60 * 24));
+                    if (dayIdx >= 0 && dayIdx < 7) {
+                        const nowHour = now.getHours() + now.getMinutes() / 60;
+                        const topPos = nowHour * HOUR_HEIGHT;
+                        const dayColumn = gridBody.querySelector(`.day-column[data-day-index="${dayIdx}"]`);
+                        if (dayColumn) {
+                            const line = document.createElement('div');
+                            line.className = 'now-line';
+                            line.style.top = `${topPos}px`;
+                            dayColumn.appendChild(line);
+                        }
+                    }
+                }
+            }
+
+            function renderDateDisplay() {
+                const viewStart = state.viewStartDate;
+                const viewEnd = addDays(viewStart, 6);
+                const startStr = formatDate(viewStart);
+                const endStr = formatDate(viewEnd);
+                dateDisplay.textContent = `${startStr}  ~  ${endStr}`;
+                const centerDate = addDays(viewStart, 3);
+                datePicker.value = formatDate(centerDate);
+            }
+
+            function renderAll() {
+                renderDayHeaders();
+                renderGrid();
+                renderDateDisplay();
+                syncScrollPositions();
+            }
+
+            function syncScrollPositions() {
+                const gridScrollTop = weekGridContainer.scrollTop;
+                if (timeAxisInner.scrollTop !== gridScrollTop) {
+                    timeAxisInner.scrollTop = gridScrollTop;
+                }
+            }
+
+            function scrollToCurrentTime() {
+                const now = new Date();
+                const nowHour = now.getHours() + now.getMinutes() / 60;
+                const targetY = nowHour * HOUR_HEIGHT;
+                const containerHeight = weekGridContainer.clientHeight;
+                const scrollTop = Math.max(0, targetY - containerHeight / 2 + 28);
+                weekGridContainer.scrollTop = scrollTop;
+                timeAxisInner.scrollTop = scrollTop;
+            }
+
+            // ==================== 选择事件 ====================
+            function selectEvent(id) {
+                if (state.selectedEventId === id) return;
+                state.selectedEventId = id;
+                // 更新所有块的选中样式，而不是重新渲染
+                const allBlocks = gridBody.querySelectorAll('.event-block');
+                allBlocks.forEach(block => {
+                    if (block.dataset.eventId === id) {
+                        block.classList.add('selected');
+                    } else {
+                        block.classList.remove('selected');
+                    }
+                });
+            }
+
+            function deselectEvent() {
+                state.selectedEventId = null;
+                const allBlocks = gridBody.querySelectorAll('.event-block');
+                allBlocks.forEach(block => block.classList.remove('selected'));
+            }
+
+            // ==================== 弹窗系统 ====================
+            function createModal(options) {
+                const modalId = 'modal_' + (++state.modalCounter);
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.id = modalId;
+                modal.dataset.modalId = modalId;
+
+                const eventId = options.eventId || null;
+                const isNew = !eventId;
+                const ev = eventId ? getEventById(eventId) : null;
+
+                const title = ev ? ev.title : '';
+                const link = ev ? ev.link : '';
+                const description = ev ? ev.description : '';
+                const color = ev ? ev.color : PRESET_COLORS[state.colorCycleIndex % PRESET_COLORS.length];
+                const date = ev ? ev.date : formatDate(addDays(state.viewStartDate, 3));
+                const startHour = ev ? ev.startHour : Math.max(9, Math.round((new Date().getHours() + 0.5) * 2) / 2);
+                const endHour = ev ? ev.endHour : startHour + 1;
+                const completed = ev ? ev.completed : false;
+
+                modal.innerHTML = `
+                    <div class="modal-header" data-modal-drag="${modalId}">
+                        <div class="modal-title-text">
+                            <span>✏️</span>
+                            <span>${isNew ? '新建日程' : '编辑日程'}</span>
+                            <span class="badge" style="background:${color}33;color:${color};border:1px solid ${color}55;">${color}</span>
+                        </div>
+                        <button class="modal-close" data-modal-close="${modalId}">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-row">
+                            <div class="form-group full">
+                                <label>📌 标题</label>
+                                <input type="text" id="${modalId}_title" value="${escapeHtml(title)}" placeholder="输入日程标题..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>🔗 超链接</label>
+                                <input type="url" id="${modalId}_link" value="${escapeHtml(link)}" placeholder="https://..." autocomplete="off">
+                            </div>
+                            <div class="form-group" style="max-width:80px;">
+                                <label>颜色</label>
+                                <input type="color" id="${modalId}_colorInput" value="${color}" title="选择颜色">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📅 日期</label>
+                                <input type="date" id="${modalId}_date" value="${date}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>⏰ 开始时间</label>
+                                <input type="time" id="${modalId}_start" value="${hourToTimeInputValue(startHour)}" step="900">
+                            </div>
+                            <div class="form-group">
+                                <label>⏰ 结束时间</label>
+                                <input type="time" id="${modalId}_end" value="${hourToTimeInputValue(endHour)}" step="900">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full">
+                                <label>📝 备注</label>
+                                <textarea id="${modalId}_desc" placeholder="添加备注...">${escapeHtml(description)}</textarea>
+                            </div>
+                        </div>
+                        <div class="completed-checkbox-row">
+                            <label>
+                                <input type="checkbox" id="${modalId}_completed" ${completed ? 'checked' : ''}>
+                                已完成任务
+                            </label>
+                        </div>
+                        <div class="form-row" style="margin-bottom:4px;">
+                            <div class="form-group full">
+                                <label>🎨 快速选色</label>
+                                <div class="color-picker-row">
+                                    <div class="color-swatches">
+                                        ${PRESET_COLORS.map(c => `
+                                            <div class="color-swatch ${c === color ? 'active' : ''}" 
+                                                 data-color="${c}" 
+                                                 style="background:${c};" 
+                                                 data-modal-color="${modalId}"></div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        ${!isNew ? `<button class="btn btn-danger" id="${modalId}_delete">🗑️ 删除</button>` : ''}
+                        <button class="btn" id="${modalId}_cancel">取消</button>
+                        <button class="btn btn-primary" id="${modalId}_save">💾 保存</button>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                const modalWidth = 440;
+                const modalHeight = Math.min(500, window.innerHeight - 60);
+                const left = Math.max(20, (window.innerWidth - modalWidth) / 2);
+                const top = Math.max(20, (window.innerHeight - modalHeight) / 2 - 20);
+                modal.style.left = left + 'px';
+                modal.style.top = top + 'px';
+
+                requestAnimationFrame(() => {
+                    modal.classList.add('active');
+                    modal.style.zIndex = ++state.modalZIndex;
+                });
+                updateModalOverlay();
+
+                const dragHandle = modal.querySelector('[data-modal-drag]');
+                let isDragging = false;
+                let dragStartX, dragStartY, origLeft, origTop;
+                dragHandle.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.modal-close')) return;
+                    isDragging = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    origLeft = modal.offsetLeft;
+                    origTop = modal.offsetTop;
+                    modal.style.cursor = 'grabbing';
+                    modal.style.zIndex = ++state.modalZIndex;
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - dragStartX;
+                    const dy = e.clientY - dragStartY;
+                    modal.style.left = (origLeft + dx) + 'px';
+                    modal.style.top = (origTop + dy) + 'px';
+                });
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        modal.style.cursor = '';
+                    }
+                });
+
+                const closeBtn = modal.querySelector(`[data-modal-close]`);
+                closeBtn.addEventListener('click', () => closeModal(modalId));
+
+                const cancelBtn = modal.querySelector(`#${modalId}_cancel`);
+                if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(modalId));
+
+                const deleteBtn = modal.querySelector(`#${modalId}_delete`);
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', () => {
+                        if (eventId) {
+                            deleteEvent(eventId);
+                            showToast('日程已删除', 'success');
+                        }
+                        closeModal(modalId);
+                    });
+                }
+
+                const saveBtn = modal.querySelector(`#${modalId}_save`);
+                saveBtn.addEventListener('click', () => {
+                    const titleVal = modal.querySelector(`#${modalId}_title`).value.trim() || '新日程';
+                    const linkVal = modal.querySelector(`#${modalId}_link`).value.trim();
+                    const dateVal = modal.querySelector(`#${modalId}_date`).value;
+                    const startVal = modal.querySelector(`#${modalId}_start`).value;
+                    const endVal = modal.querySelector(`#${modalId}_end`).value;
+                    const descVal = modal.querySelector(`#${modalId}_desc`).value.trim();
+                    const colorVal = modal.querySelector(`#${modalId}_colorInput`).value;
+                    const completedVal = modal.querySelector(`#${modalId}_completed`).checked;
+
+                    const startH = timeInputToHour(startVal);
+                    const endH = timeInputToHour(endVal);
+
+                    if (endH <= startH) {
+                        showToast('结束时间必须晚于开始时间', 'error');
+                        return;
+                    }
+
+                    if (eventId) {
+                        updateEvent(eventId, {
+                            title: titleVal,
+                            link: linkVal,
+                            date: dateVal,
+                            startHour: startH,
+                            endHour: endH,
+                            description: descVal,
+                            color: colorVal,
+                            completed: completedVal,
+                        });
+                        showToast('日程已更新', 'success');
+                    } else {
+                        const newEv = addEvent({
+                            title: titleVal,
+                            link: linkVal,
+                            date: dateVal,
+                            startHour: startH,
+                            endHour: endH,
+                            description: descVal,
+                            color: colorVal,
+                            completed: completedVal,
+                        });
+                        showToast('日程已创建', 'success');
+                        selectEvent(newEv.id);
+                    }
+                    closeModal(modalId);
+                });
+
+                const colorInput = modal.querySelector(`#${modalId}_colorInput`);
+                colorInput.addEventListener('input', () => {
+                    const c = colorInput.value;
+                    const badge = modal.querySelector('.badge');
+                    if (badge) {
+                        badge.style.background = c + '33';
+                        badge.style.color = c;
+                        badge.style.borderColor = c + '55';
+                        badge.textContent = c;
+                    }
+                    updateSwatchActive(modal, c);
+                });
+
+                const swatches = modal.querySelectorAll('.color-swatch');
+                swatches.forEach(sw => {
+                    sw.addEventListener('click', () => {
+                        const c = sw.dataset.color;
+                        colorInput.value = c;
+                        const badge = modal.querySelector('.badge');
+                        if (badge) {
+                            badge.style.background = c + '33';
+                            badge.style.color = c;
+                            badge.style.borderColor = c + '55';
+                            badge.textContent = c;
+                        }
+                        updateSwatchActive(modal, c);
+                    });
+                });
+
+                modal.addEventListener('mousedown', () => {
+                    modal.style.zIndex = ++state.modalZIndex;
+                    updateModalOverlay();
+                });
+
+                state.modals.push({ id: modalId, element: modal, eventId });
+                updateModalOverlay();
+
+                setTimeout(() => {
+                    const titleInput = modal.querySelector(`#${modalId}_title`);
+                    if (titleInput) titleInput.focus();
+                }, 200);
+
+                return modalId;
+            }
+
+            function updateSwatchActive(modal, color) {
+                const swatches = modal.querySelectorAll('.color-swatch');
+                swatches.forEach(sw => {
+                    if (sw.dataset.color === color) {
+                        sw.classList.add('active');
+                    } else {
+                        sw.classList.remove('active');
+                    }
+                });
+            }
+
+            function closeModal(modalId) {
+                const idx = state.modals.findIndex(m => m.id === modalId);
+                if (idx === -1) return;
+                const modalData = state.modals[idx];
+                const modal = modalData.element;
+                modal.classList.add('closing');
+                modal.classList.remove('active');
+                setTimeout(() => {
+                    if (modal.parentNode) modal.remove();
+                }, 280);
+                state.modals.splice(idx, 1);
+                updateModalOverlay();
+            }
+
+            function closeAllModals() {
+                const ids = state.modals.map(m => m.id);
+                ids.forEach(id => closeModal(id));
+            }
+
+            function updateModalOverlay() {
+                if (state.modals.length > 0) {
+                    modalOverlay.classList.add('active');
+                } else {
+                    modalOverlay.classList.remove('active');
+                }
+            }
+
+            modalOverlay.addEventListener('click', () => {
+                closeAllModals();
+            });
+
+            function openEditModal(eventId) {
+                createModal({ eventId });
+            }
+
+            function openNewEventModal(dateStr, startHour) {
+                const modalId = createModal({
+                    eventId: null,
+                });
+                const modal = state.modals.find(m => m.id === modalId);
+                if (modal) {
+                    setTimeout(() => {
+                        const modalEl = modal.element;
+                        const dateInput = modalEl.querySelector(`#${modalId}_date`);
+                        const startInput = modalEl.querySelector(`#${modalId}_start`);
+                        const endInput = modalEl.querySelector(`#${modalId}_end`);
+                        if (dateStr && dateInput) dateInput.value = dateStr;
+                        if (startHour !== undefined && startInput && endInput) {
+                            startInput.value = hourToTimeInputValue(startHour);
+                            endInput.value = hourToTimeInputValue(startHour + 1);
+                        }
+                    }, 50);
+                }
+                return modalId;
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // ==================== 事件拖动处理 ====================
+            function onEventMouseDown(e, ev, block) {
+                if (e.button !== 0) return;
+                const handle = e.target.dataset.handle;
+                if (handle === 'top' || handle === 'bottom') {
+                    startResize(e, ev, block, handle);
+                } else {
+                    startDrag(e, ev, block);
+                }
+            }
+
+            function startDrag(e, ev, block) {
+                e.preventDefault();
+                e.stopPropagation();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const origDate = ev.date;
+                const origStartHour = ev.startHour;
+                const origEndHour = ev.endHour;
+                let moved = false; // 标记是否移动
+
+                block.classList.add('dragging');
+                block.style.transition = 'none';
+                block.style.zIndex = '100';
+                document.body.style.cursor = 'grabbing';
+
+                const onMove = (e) => {
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                        moved = true;
+                        block.style.transform = `translate(${dx}px, ${dy}px)`;
+                    }
+                };
+
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    block.classList.remove('dragging');
+                    block.style.cursor = '';
+                    block.style.transform = '';
+                    block.style.transition = '';
+                    block.style.zIndex = '';
+                    document.body.style.cursor = '';
+
+                    if (!moved) {
+                        // 没有实际移动，忽略拖拽
+                        return;
+                    }
+
+                    const rect = block.getBoundingClientRect();
+                    const gridRect = gridBody.getBoundingClientRect();
+                    const colWidth = gridRect.width / 7;
+                    const centerX = rect.left - gridRect.left + rect.width / 2;
+                    const newDayIdx = clamp(Math.floor(centerX / colWidth), 0, 6);
+                    const newTop = rect.top - gridRect.top;
+                    const newStartHour = clamp(roundToQuarter(newTop / HOUR_HEIGHT), 0, 24 - (origEndHour - origStartHour));
+                    const newDate = formatDate(addDays(state.viewStartDate, newDayIdx));
+
+                    if (newDate !== origDate || newStartHour !== origStartHour) {
+                        updateEvent(ev.id, {
+                            date: newDate,
+                            startHour: newStartHour,
+                            endHour: newStartHour + (origEndHour - origStartHour),
+                        });
+                        showToast('日程已移动', 'success');
+                    } else {
+                        renderEventBlocks();
+                    }
+                };
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            }
+
+            function startResize(e, ev, block, handle) {
+                e.preventDefault();
+                e.stopPropagation();
+                const origStartHour = ev.startHour;
+                const origEndHour = ev.endHour;
+                const isTop = handle === 'top';
+
+                block.classList.add('dragging');
+                document.body.style.cursor = 'ns-resize';
+
+                const onMove = (e) => {
+                    const containerRect = gridBody.getBoundingClientRect();
+                    const rawHour = (e.clientY - containerRect.top - 28) / HOUR_HEIGHT;
+                    if (isTop) {
+                        const newStart = clamp(roundToQuarter(rawHour), 0, origEndHour - MIN_EVENT_DURATION);
+                        block.style.top = (newStart * HOUR_HEIGHT) + 'px';
+                        block.style.height = ((origEndHour - newStart) * HOUR_HEIGHT) + 'px';
+                        block._newStartHour = newStart;
+                    } else {
+                        const newEnd = clamp(roundToQuarter(rawHour), origStartHour + MIN_EVENT_DURATION, 24);
+                        block.style.height = ((newEnd - origStartHour) * HOUR_HEIGHT) + 'px';
+                        block._newEndHour = newEnd;
+                    }
+                };
+
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    block.classList.remove('dragging');
+                    document.body.style.cursor = '';
+
+                    if (isTop && block._newStartHour !== undefined && block._newStartHour !== origStartHour) {
+                        updateEvent(ev.id, { startHour: block._newStartHour });
+                        showToast('开始时间已调整', 'success');
+                    } else if (!isTop && block._newEndHour !== undefined && block._newEndHour !== origEndHour) {
+                        updateEvent(ev.id, { endHour: block._newEndHour });
+                        showToast('结束时间已调整', 'success');
+                    } else {
+                        renderEventBlocks();
+                    }
+                    delete block._newStartHour;
+                    delete block._newEndHour;
+                };
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            }
+
+            // ==================== 导航（无限滚动） ====================
+            function navigateDays(delta) {
+                state.viewStartDate = addDays(state.viewStartDate, delta);
+                deselectEvent();
+                renderAll();
+                syncScrollPositions();
+            }
+
+            function goToToday() {
+                const today = new Date();
+                state.viewStartDate = getViewStartForCenterDate(today);
+                deselectEvent();
+                renderAll();
+                scrollToCurrentTime();
+                showToast('已回到今天并居中当前时间', 'info');
+            }
+
+            function goToDate(dateStr) {
+                const centerDate = parseDate(dateStr);
+                state.viewStartDate = getViewStartForCenterDate(centerDate);
+                deselectEvent();
+                renderAll();
+                scrollToCurrentTime();
+            }
+
+            // ==================== 侧边导航按钮 ====================
+            $('#sideLeftBtn').addEventListener('click', () => navigateDays(-1));
+            $('#sideRightBtn').addEventListener('click', () => navigateDays(1));
+
+            // ==================== 网格双击创建 ====================
+            gridBody.addEventListener('dblclick', (e) => {
+                const dayColumn = e.target.closest('.day-column');
+                if (!dayColumn) return;
+                if (e.target.closest('.event-block')) return;
+                const containerRect = gridBody.getBoundingClientRect();
+                const relY = e.clientY - containerRect.top - 28;
+                const hour = clamp(roundToQuarter(relY / HOUR_HEIGHT), 0, 22.5);
+                const dateStr = dayColumn.dataset.date;
+                openNewEventModal(dateStr, hour);
+            });
+
+            // ==================== 滚动同步 ====================
+            weekGridContainer.addEventListener('scroll', () => {
+                syncScrollPositions();
+                renderNowLine();
+            });
+            timeAxisInner.addEventListener('scroll', () => {
+                if (weekGridContainer.scrollTop !== timeAxisInner.scrollTop) {
+                    weekGridContainer.scrollTop = timeAxisInner.scrollTop;
+                }
+            });
+
+            // ==================== 工具栏事件 ====================
+            $('#btnPrevDay').addEventListener('click', () => navigateDays(-1));
+            $('#btnNextDay').addEventListener('click', () => navigateDays(1));
+            $('#btnToday').addEventListener('click', goToToday);
+            $('#btnNewEvent').addEventListener('click', () => {
+                const today = new Date();
+                const dateStr = formatDate(today);
+                const hour = roundToQuarter(today.getHours() + (today.getMinutes() >= 30 ? 1 : 0));
+                openNewEventModal(dateStr, Math.min(hour, 22));
+            });
+            $('#btnRefresh').addEventListener('click', () => {
+                loadFromStorage(true);
+                showToast('数据已刷新', 'success');
+            });
+            $('#btnClearAll').addEventListener('click', () => {
+                if (state.events.length === 0) {
+                    showToast('暂无日程可清除', 'info');
+                    return;
+                }
+                if (confirm(`确定清除所有 ${state.events.length} 条日程吗？此操作不可恢复！`)) {
+                    state.events = [];
+                    state.selectedEventId = null;
+                    saveToStorage();
+                    renderAll();
+                    closeAllModals();
+                    showToast('所有日程已清除', 'success');
+                }
+            });
+            datePicker.addEventListener('change', () => {
+                if (datePicker.value) {
+                    goToDate(datePicker.value);
+                }
+            });
+
+            // ==================== 初始化 ====================
+            function init() {
+                const today = new Date();
+                state.viewStartDate = getViewStartForCenterDate(today);
+
+                loadFromStorage(true);
+                renderTimeAxis();
+                renderAll();
+                scrollToCurrentTime();
+
+                setInterval(() => {
+                    renderNowLine();
+                }, 30000);
+
+                console.log('日程表已初始化');
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
